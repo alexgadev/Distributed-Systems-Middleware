@@ -1,27 +1,29 @@
 from xmlrpc.server import SimpleXMLRPCServer
-import xmlrpc.client
+from xmlrpc.server import SimpleXMLRPCRequestHandler
 
-class InsultFilter:
-    def __init__(self):
-        self.filtered = []
-        self.insults = []
+class RequestHandler(SimpleXMLRPCRequestHandler):
+    rpc_paths = ('/RPC2',)
+
+
+with SimpleXMLRPCServer(('localhost', 9000),
+                        requestHandler=RequestHandler) as server:
+    class InsultFilter:
+        def __init__(self):
+            self.filtered = []
+            self.insults = ["idiot", "stupid", "nerd"]
+
+        def submit_text(self, text):
+            for insult in self.insults:
+                text = text.replace(insult, "CENSORED")
+            self.filtered.append(text)
+            return text
+
+        def get_filtered(self):
+            return self.filtered
     
-    def update_insults(self):
-        proxy = xmlrpc.client.ServerProxy("http://localhost:9000/")
-        self.insults = proxy.get_insults()
-        return True
+    server.register_instance(InsultFilter())
     
-    def submit_text(self, text):
-        for insult in self.insults:
-            text = text.replace(insult, "CENSORED")
-        self.filtered.append(text)
-        return text
-    
-    def get_filtered(self):
-        return self.filtered
-    
-server = SimpleXMLRPCServer(("localhost", 9001))
-filter_service = InsultFilter()
-server.register_instance(filter_service)
-print("InsultFilter XMLRPC running on port 9001")
-server.serve_forever()
+    # Run the server's main loop
+    print("InsultFilter XMLRPC running on port 8000")
+
+    server.serve_forever()
